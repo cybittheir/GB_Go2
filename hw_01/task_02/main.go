@@ -8,18 +8,18 @@ package main
 
 import "fmt"
 
-func BubbleSort(a *[]int) {
+func BubbleSort(a *[6]int) {
 
 	var t int
 	var w bool
-	s := *a
+	//	s := *a
 	for {
 		w = true
-		for i := range len(s) - 1 {
-			if s[i+1] < s[i] {
-				t = s[i]
-				s[i] = s[i+1]
-				s[i+1] = t
+		for i := range 5 {
+			if a[i+1] < a[i] {
+				t = a[i]
+				a[i] = a[i+1]
+				a[i+1] = t
 				w = false
 			}
 		}
@@ -27,17 +27,17 @@ func BubbleSort(a *[]int) {
 			break
 		}
 	}
-	fmt.Println(s)
+	fmt.Println(a)
 
 }
 
 func main() {
-	a := []int{43, 10, 35, 14, 17, 22}
+	a := [6]int{43, 10, 35, 14, 17, 22}
 
-	fmt.Println(a)
+	fmt.Println("Source: ", a)
 
 	BubbleSort(&a)
 
-	fmt.Println(a)
+	fmt.Println("Result: ", a)
 
 }
