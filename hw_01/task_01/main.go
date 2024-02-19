@@ -19,14 +19,12 @@ func splitSorted(a1 []int, a2 []int) []int {
 
 	for range len(a1) + len(a2) {
 		switch {
-		case j == len(a1) || k == len(a2):
-			if k == len(a2) {
-				k--
-				r = append(r, a1[j])
-			} else {
-				j--
-				r = append(r, a2[k])
-			}
+		case j == len(a1):
+			j--
+			r = append(r, a2[k])
+		case k == len(a2):
+			k--
+			r = append(r, a1[j])
 		case j == len(a1)-1:
 			if a2[k] <= a1[j] || sj == 1 {
 				r = append(r, a2[k])
