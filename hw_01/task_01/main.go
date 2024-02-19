@@ -10,7 +10,7 @@ import (
 Напишите функцию, которая производит слияние двух отсортированных массивов длиной четыре и пять в один массив длиной девять.
 */
 
-func splitSorted(a1 []int, a2 []int) []int {
+func mergeSorted(a1 []int, a2 []int) []int {
 
 	var r []int
 
@@ -67,7 +67,7 @@ func main() {
 
 	fmt.Println(a1, " + ", a2)
 
-	s := splitSorted(a1[0:], a2[0:])
+	s := mergeSorted(a1[0:], a2[0:])
 
 	var r [9]int
 
