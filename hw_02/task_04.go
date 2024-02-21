@@ -2,7 +2,10 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -10,15 +13,23 @@ import (
 
 func writeFile(fn string) {
 
-	f, err := os.Create(fn)
-	if err != nil {
-		fmt.Println("File not", err)
+	s, err := os.Stat(fn)
+	if errors.Is(err, os.ErrNotExist) {
+
+	} else if err != nil {
+		fmt.Println("File error: ", err)
+		return
+	} else if s.Mode() == 0444 || s.Mode() == 0440 || s.Mode() == 0400 {
+		fmt.Println("Внимание! Файл не может быть открыт для записи!")
 		return
 	}
+
+	var b bytes.Buffer
+
 	fmt.Println("Введите предложение (exit или wr для выхода из режима заполнения):")
 	reader := bufio.NewReader(os.Stdin)
 	var n int
-	var tx string
+
 	for {
 		fmt.Print("> ")
 		text, _ := reader.ReadString('\n')
@@ -33,12 +44,13 @@ func writeFile(fn string) {
 		n++
 		tt := fmt.Sprintf("%d. %s %s\n", n, tm.Format("02/01/2006 15:04:05"), t)
 		fmt.Println(tt)
-		tx += tt
+		b.WriteString(tt)
 	}
-	defer f.Close()
 
-	f.WriteString(tx)
-
+	if err := os.WriteFile(fn, b.Bytes(), 0600); err != nil {
+		fmt.Println("Unable to save", err)
+		return
+	}
 	fmt.Println("Информация сохранена")
 
 	// setting ReadOnly mode after saving
@@ -63,23 +75,22 @@ func readFile(fn string) {
 		return
 	}
 
-	buf := make([]byte, sz)
+	//	buf := make([]byte, sz)
 
 	f, err := os.Open(fn)
 	if err != nil {
-		fmt.Println("File not opened: ", err)
+		fmt.Println("Can not open file: ", err)
 		return
 	}
 	defer f.Close()
 
-	//	if _, err := io.ReadFull(f, buf); err != nil {
-	if _, err := f.Read(buf); err != nil {
+	if rbytes, err := io.ReadAll(f); err != nil {
 		fmt.Println("Cannot read file: ", err)
 		return
+	} else {
+		fmt.Printf("File %s, size=%d bytes:\n", fn, sz)
+		fmt.Printf("%s\n", string(rbytes))
 	}
-
-	fmt.Printf("File %s, size=%d bytes:\n", fn, sz)
-	fmt.Printf("%s\n", buf)
 
 }
 
