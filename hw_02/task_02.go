@@ -7,12 +7,6 @@ import (
 
 func main() {
 	fn := "list.txt"
-	f, err := os.Open(fn)
-	if err != nil {
-		fmt.Println("File not opened: ", err)
-		return
-	}
-	defer f.Close()
 
 	s, err := os.Stat(fn)
 	if err != nil {
@@ -22,7 +16,19 @@ func main() {
 
 	sz := s.Size()
 
+	if sz == 0 {
+		fmt.Println("File is empty")
+		return
+	}
+
 	buf := make([]byte, sz)
+
+	f, err := os.Open(fn)
+	if err != nil {
+		fmt.Println("File not opened: ", err)
+		return
+	}
+	defer f.Close()
 
 	//	if _, err := io.ReadFull(f, buf); err != nil {
 	if _, err := f.Read(buf); err != nil {

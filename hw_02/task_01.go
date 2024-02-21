@@ -12,7 +12,7 @@ func main() {
 	fn := "list.txt"
 	f, err := os.Create(fn)
 	if err != nil {
-		fmt.Println("File not open", err)
+		fmt.Println("File not", err)
 		return
 	}
 	fmt.Println("Введите предложение:")
