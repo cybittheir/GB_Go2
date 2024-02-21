@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 )
 
@@ -24,7 +23,9 @@ func main() {
 	sz := s.Size()
 
 	buf := make([]byte, sz)
-	if _, err := io.ReadFull(f, buf); err != nil {
+
+	//	if _, err := io.ReadFull(f, buf); err != nil {
+	if _, err := f.Read(buf); err != nil {
 		fmt.Println("Cannot read file: ", err)
 		return
 	}
