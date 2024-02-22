@@ -48,11 +48,7 @@ func buildItem(n int) (string, bool) {
 		r += l[m]
 	}
 	r += l[1]
-	z--
-	if z != 0 || len(r) < 2*n { // на случай если не получилось собрать
-		fmt.Println("failed")
-		return "", false
-	}
+
 	return r, true
 
 }
@@ -72,7 +68,6 @@ func combine(n int) []string {
 		s[r] = r
 	} else {
 		for {
-
 			r, f = buildItem(n)
 			if f == true && s[r] != r {
 				s[r] = r
@@ -82,9 +77,11 @@ func combine(n int) []string {
 			}
 		}
 	}
+
 	for i, _ := range s {
 		sr = append(sr, i)
 	}
+
 	fmt.Println("===========")
 	fmt.Printf("Вариантов: %d\n", len(s))
 
@@ -114,10 +111,6 @@ func main() {
 	}
 
 	r := combine(n)
-	fmt.Print("[")
-	for _, v := range r {
-		fmt.Printf("\"%s\"", v)
-	}
-	fmt.Print("]\n")
+	fmt.Printf("Result:\n[\"%s\"]\n", strings.Join(r, "\", \""))
 
 }
