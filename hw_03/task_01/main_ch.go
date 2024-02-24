@@ -27,7 +27,7 @@ import (
 Воспользуйтесь небуферизированными каналами и waitgroup.
 */
 
-func square(wg *sync.WaitGroup, a int) int {
+func squareInt(wg *sync.WaitGroup, a int) int {
 	defer wg.Done()
 	r := a * a
 	fmt.Println("X^2 = ", r)
@@ -35,14 +35,14 @@ func square(wg *sync.WaitGroup, a int) int {
 	return r
 }
 
-func double(wg *sync.WaitGroup, a int) int {
+func doubleInt(wg *sync.WaitGroup, a int) int {
 	defer wg.Done()
 	r := 2 * a
 	fmt.Println("2 x X = ", r)
 	return r
 }
 
-func inNum(a string) int {
+func toNum(a string) int {
 	r, err := strconv.Atoi(a)
 	if err != nil {
 		fmt.Println("Ошибка ввода. Требуется число")
