@@ -1,0 +1,9 @@
+общая папка домашки включая скриншоты
+https://github.com/cybittheir/GB_Go2/tree/main/hw_02
+
+Ссылки на решения
+https://github.com/cybittheir/GB_Go2/blob/main/hw_02/task_01.go
+https://github.com/cybittheir/GB_Go2/blob/main/hw_02/task_02.go
+https://github.com/cybittheir/GB_Go2/blob/main/hw_02/task_03.go
+https://github.com/cybittheir/GB_Go2/blob/main/hw_02/task_04.go
+https://github.com/cybittheir/GB_Go2/blob/main/hw_02/task_05.go
