@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 /*
@@ -27,19 +26,27 @@ import (
 Воспользуйтесь небуферизированными каналами и waitgroup.
 */
 
-func squareInt(wg *sync.WaitGroup, a int) int {
-	defer wg.Done()
-	r := a * a
-	fmt.Println("X^2 = ", r)
-	go double(wg, r)
-	return r
+func squareInt(a int) chan int {
+	sCh := make(chan int)
+	go func() {
+		sCh <- a * a
+		fmt.Print("a ^ 2 =")
+	}()
+	return sCh
 }
 
-func doubleInt(wg *sync.WaitGroup, a int) int {
-	defer wg.Done()
-	r := 2 * a
-	fmt.Println("2 x X = ", r)
-	return r
+func dInt(sCh chan int) chan int {
+	tCh := make(chan int)
+	go func() {
+		a, ok := <-sCh
+		if ok {
+			fmt.Println(a)
+			r := 2 * a
+			tCh <- r
+			fmt.Print("2 x X = ")
+		}
+	}()
+	return tCh
 }
 
 func toNum(a string) int {
@@ -55,10 +62,7 @@ func toNum(a string) int {
 func main() {
 
 	reader := bufio.NewReader(os.Stdin)
-	var wg sync.WaitGroup
-	//	type(ch1 chan)
 	for {
-		wg.Add(2)
 		fmt.Print("Введите целое число или 'стоп' для выхода: ")
 		in, _ := reader.ReadString('\n')
 		t := strings.TrimSpace(in)
@@ -66,12 +70,11 @@ func main() {
 		if strings.ToLower(t) == "стоп" || strings.ToLower(t) == "stop" {
 			break
 		} else {
-			a = inNum(t)
+			a = toNum(t)
 
 		}
-
-		go square(&wg, a)
-
-		wg.Wait()
+		fc := squareInt(a)
+		sc := dInt(fc)
+		fmt.Println(<-sc)
 	}
 }
