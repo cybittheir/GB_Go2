@@ -58,7 +58,6 @@ func main() {
 	var wg sync.WaitGroup
 	//	type(ch1 chan)
 	for {
-		wg.Add(2)
 		fmt.Print("Введите целое число или 'стоп' для выхода: ")
 		in, _ := reader.ReadString('\n')
 		t := strings.TrimSpace(in)
@@ -70,6 +69,7 @@ func main() {
 
 		}
 
+		wg.Add(2)
 		go square(&wg, a)
 
 		wg.Wait()
