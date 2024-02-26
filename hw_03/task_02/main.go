@@ -31,10 +31,11 @@ func main() {
 	fmt.Println("-= Start =-")
 
 	x := make(chan os.Signal, 1)
+	signal.Notify(x, syscall.SIGINT, syscall.SIGTERM)
 
 	i := 1
 	for {
-		signal.Notify(x, syscall.SIGINT, syscall.SIGTERM)
+
 		select {
 		case sig := <-x:
 			fmt.Println("Graceful shutdown", sig)
