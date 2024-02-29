@@ -82,7 +82,6 @@ func main() {
 	mux.HandleFunc("/friendship", srv.SetRelations)
 	mux.HandleFunc("/friendbreak", srv.DelRelations)
 	mux.HandleFunc("/age", srv.ChangeAge)
-	mux.HandleFunc("/agechange", srv.ChangeAge)
 
 	err := http.ListenAndServe("127.0.0.1:8080", mux)
 	if errors.Is(err, http.ErrServerClosed) {
@@ -231,6 +230,7 @@ func (b *base) DelUser(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err.Error())
 			return
 		}
+		defer r.Body.Close()
 
 		if st, err := QueryParse(content); err != nil {
 			fmt.Println(err.Error())
@@ -243,7 +243,6 @@ func (b *base) DelUser(w http.ResponseWriter, r *http.Request) {
 
 			}
 		}
-		defer r.Body.Close()
 		return
 	}
 	w.WriteHeader(http.StatusBadRequest)
@@ -272,5 +271,51 @@ func (b *base) DelRelations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *base) ChangeAge(w http.ResponseWriter, r *http.Request) {
-	return
+	aForm := `<form method=POST action=/age>
+	User ID <input type=text id=id name=id size=3><br>
+	Correct Age to <input type=text id=age name=age size=3><br>
+	<input type=submit value="Change" name=ok>
+	</form>`
+	menu := addForm + friendsForm + list
+
+	if r.Method == "GET" {
+
+		response := ""
+		for _, user := range b.storage {
+			response += user.Numbered()
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(useTemplate("Choose user to change his Age", nl2br(response+aForm), menu)))
+		return
+	} else if r.Method == "POST" {
+
+		content, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			fmt.Println(err.Error())
+			return
+		}
+		defer r.Body.Close()
+
+		if st, err := QueryParse(content); err != nil {
+			fmt.Println(err.Error())
+		} else {
+			menu = addForm + friendsForm + ageForm + list
+			if uId, err := strconv.Atoi(st["id"]); err != nil {
+				w.Write([]byte(useTemplate("Error", fmt.Sprintf("wrong user ID%d. Get list and Try again", uId), menu)))
+				return
+			} else if uAge, err := strconv.Atoi(st["age"]); err != nil {
+				w.Write([]byte(useTemplate("Error", fmt.Sprintf("wrong User Age%d. Get list and Try again", uAge), menu)))
+				return
+			} else if b.storage[uId] != nil {
+				b.storage[uId].Age = uAge
+				w.Write([]byte(useTemplate("User's Age was changed", fmt.Sprintf("New User's Age (ID%d) is %d now", uId, uAge), menu)))
+
+			}
+		}
+		return
+	}
+	w.WriteHeader(http.StatusBadRequest)
+
 }
