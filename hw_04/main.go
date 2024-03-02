@@ -15,7 +15,7 @@ import (
 
 const header = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<title>%title%</title>\n<meta charset=\"utf-8\">\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</head>\n"
 const footer = "</html>"
-const home = "<br>\n<a href=\\>go home</a>"
+const home = "<br>\n<a href=\\>go home / add user</a>"
 const list = "<br>\n<a href=\\get>get users list</a>"
 const ageForm = "<br>\n<a href=\\age>change user's age</a>"
 const deleteForm = "<br>\n<a href=\\delete>delete user</a>"
