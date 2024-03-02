@@ -7,15 +7,15 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-const header = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<title>%title%</title>\n<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js\"></script>\n</head>\n"
+const header = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<title>%title%</title>\n<meta charset=\"utf-8\">\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</head>\n"
 const footer = "</html>"
-const addForm = "<br>\n<a href=\\>go home</a>"
+const home = "<br>\n<a href=\\>go home</a>"
 const list = "<br>\n<a href=\\get>get users list</a>"
-const friendsForm = "<br>\n<a href=\\friendship>friendship</a>"
 const ageForm = "<br>\n<a href=\\age>change user's age</a>"
 const deleteForm = "<br>\n<a href=\\delete>delete user</a>"
 const page = header + `
@@ -39,12 +39,14 @@ func (u *User) ToString() string {
 
 	bp := "User %s with id%d and age of %d y.o. has "
 
+	fUrl := fmt.Sprintf("<a href=/friendship/id%d>", u.Id)
+
 	if len(u.Friends) == 0 {
-		return fmt.Sprintf(bp+"no friends.\n", u.Name, u.Id, u.Age)
+		return fmt.Sprintf(bp+"no %sfriends</a>.\n", u.Name, u.Id, u.Age, fUrl)
 	} else if len(u.Friends) == 1 {
-		return fmt.Sprintf(bp+"only friend %s.\n", u.Name, u.Id, u.Age, strings.Join(u.Friends, ", "))
+		return fmt.Sprintf(bp+"only %sfriend %s</a>.\n", u.Name, u.Id, u.Age, fUrl, strings.Join(u.Friends, ", "))
 	} else {
-		return fmt.Sprintf(bp+"friends: %s.\n", u.Name, u.Id, u.Age, strings.Join(u.Friends, ", "))
+		return fmt.Sprintf(bp+"%d %sfriends</a>: %s.\n", u.Name, u.Id, u.Age, len(u.Friends), fUrl, strings.Join(u.Friends, ", "))
 	}
 }
 
@@ -53,6 +55,18 @@ func (u *User) Numbered() string {
 	bp := "%d. %s (%d)"
 
 	return fmt.Sprintf(bp+"\n", u.Id, u.Name, u.Age)
+}
+
+func (u *User) Checked(c bool) string {
+
+	bp := ""
+	if c {
+		bp = "<input type=checkbox name=id_%d id=id_%d checked><label for=id_%d>%s (%d)</label>"
+
+	} else {
+		bp = "<input type=checkbox name=id_%d id=id_%d><label for=id_%d>%s (%d)</label>"
+	}
+	return fmt.Sprintf(bp+"\n", u.Id, u.Id, u.Id, u.Name, u.Age)
 }
 
 func nl2br(in string) string {
@@ -75,12 +89,11 @@ func main() {
 	mux := http.NewServeMux()
 	srv := base{make(map[int]*User)}
 
-	mux.HandleFunc("/", Start)
+	mux.HandleFunc("/", srv.Start)
 	mux.HandleFunc("/create", srv.Create)
 	mux.HandleFunc("/get", srv.GetAll)
 	mux.HandleFunc("/delete", srv.DelUser)
-	mux.HandleFunc("/friendship", srv.SetRelations)
-	mux.HandleFunc("/friendbreak", srv.DelRelations)
+	mux.HandleFunc("/friendship/", srv.SetRelations)
 	mux.HandleFunc("/age", srv.ChangeAge)
 
 	err := http.ListenAndServe("127.0.0.1:8080", mux)
@@ -129,17 +142,21 @@ func (u *User) QueryParse(query []byte) ([]byte, error) {
 	return json.Marshal(u)
 }
 
-func Start(w http.ResponseWriter, r *http.Request) {
+func (b *base) Start(w http.ResponseWriter, r *http.Request) {
 
 	form := `<form method=POST action=/create>
 Username <input type=text id=name name=name size=20><br>
 Age <input type=text id=age name=age size=5><br>
-<!-- Friends list <input type=text name=friends size=50><br> -->
 <input type=submit value="Add User" name=ok>
-<button onclick="sendJSON()">Проверить JSON</button>
 </form>`
 	defer r.Body.Close()
-	menu := friendsForm + ageForm + deleteForm + list
+	menu := ""
+	switch len(b.storage) {
+	case 0:
+		menu = ""
+	default:
+		menu = ageForm + deleteForm + list
+	}
 	form = strings.Replace(form, "%menu%", menu, 1)
 	if r.Method == "GET" {
 		w.Write([]byte(useTemplate("Home page - add user", form, menu)))
@@ -178,7 +195,14 @@ func (b *base) Create(w http.ResponseWriter, r *http.Request) {
 
 			w.WriteHeader(http.StatusCreated)
 			text := "User " + u.Name + " was created and got ID" + strconv.Itoa(u.Id)
-			menu := addForm + friendsForm + ageForm + deleteForm + list
+
+			menu := ""
+			switch len(b.storage) {
+			case 0:
+				menu = home
+			default:
+				menu = home + ageForm + deleteForm + list
+			}
 
 			w.Write([]byte(useTemplate("User added", text, menu)))
 		}
@@ -197,7 +221,14 @@ func (b *base) GetAll(w http.ResponseWriter, r *http.Request) {
 			response += user.ToString()
 		}
 		w.WriteHeader(http.StatusOK)
-		menu := addForm + friendsForm + ageForm + deleteForm
+		menu := ""
+		switch len(b.storage) {
+		case 0:
+			menu = home
+		default:
+			menu = home + ageForm + deleteForm
+		}
+
 		w.Write([]byte(useTemplate("Users list", nl2br(response), menu)))
 		return
 	}
@@ -210,7 +241,14 @@ func (b *base) DelUser(w http.ResponseWriter, r *http.Request) {
 	User ID <input type=text id=id name=id size=3><br>
 	<input type=submit value="Delete" name=ok>
 	</form>`
-	menu := addForm + friendsForm + ageForm + list
+	menu := ""
+
+	switch len(b.storage) {
+	case 0:
+		menu = home
+	default:
+		menu = home + ageForm + list
+	}
 
 	if r.Method == "GET" {
 
@@ -219,6 +257,7 @@ func (b *base) DelUser(w http.ResponseWriter, r *http.Request) {
 			response += user.Numbered()
 		}
 		w.WriteHeader(http.StatusOK)
+
 		w.Write([]byte(useTemplate("Choose user to delete", nl2br(response+delForm), menu)))
 		return
 	} else if r.Method == "POST" {
@@ -239,6 +278,13 @@ func (b *base) DelUser(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(useTemplate("Error", fmt.Sprintf("User with ID%d not found. Get list and Try again", delId), menu)))
 			} else if b.storage != nil {
 				delete(b.storage, delId)
+				b.RemoveFriend(delId)
+				switch len(b.storage) {
+				case 0:
+					menu = home
+				default:
+					menu = home + ageForm + list
+				}
 				w.Write([]byte(useTemplate("User was deletes", fmt.Sprintf("User with ID%d was deleted", delId), menu)))
 
 			}
@@ -249,34 +295,20 @@ func (b *base) DelUser(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (b *base) SetRelations(w http.ResponseWriter, r *http.Request) {
-
-	form := `<form method=POST action=/link>
-Username <input type=text name=name size=20><br>
-Age <input type=text name=age size=5><br>
-<!-- Friends list <input type=text name=friends size=50><br> -->
-<input type=submit value="Add User" name=ok>
-</form>`
-	defer r.Body.Close()
-	menu := friendsForm + ageForm + deleteForm + list
-	form = strings.Replace(form, "%menu%", menu, 1)
-	if r.Method == "GET" {
-		w.Write([]byte(useTemplate("Home page - add user", form, menu)))
-		return
-	}
-}
-
-func (b *base) DelRelations(w http.ResponseWriter, r *http.Request) {
-	return
-}
-
 func (b *base) ChangeAge(w http.ResponseWriter, r *http.Request) {
 	aForm := `<form method=POST action=/age>
 	User ID <input type=text id=id name=id size=3><br>
 	Correct Age to <input type=text id=age name=age size=3><br>
 	<input type=submit value="Change" name=ok>
 	</form>`
-	menu := addForm + friendsForm + list
+
+	menu := ""
+	switch len(b.storage) {
+	case 0:
+		menu = home
+	default:
+		menu = home + deleteForm + list
+	}
 
 	if r.Method == "GET" {
 
@@ -287,7 +319,9 @@ func (b *base) ChangeAge(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(useTemplate("Choose user to change his Age", nl2br(response+aForm), menu)))
 		return
-	} else if r.Method == "POST" {
+	}
+
+	if r.Method == "POST" {
 
 		content, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -301,7 +335,7 @@ func (b *base) ChangeAge(w http.ResponseWriter, r *http.Request) {
 		if st, err := QueryParse(content); err != nil {
 			fmt.Println(err.Error())
 		} else {
-			menu = addForm + friendsForm + ageForm + list
+			menu = home + ageForm + list
 			if uId, err := strconv.Atoi(st["id"]); err != nil {
 				w.Write([]byte(useTemplate("Error", fmt.Sprintf("wrong user ID%d. Get list and Try again", uId), menu)))
 				return
@@ -318,4 +352,115 @@ func (b *base) ChangeAge(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusBadRequest)
 
+}
+
+func (b *base) SetRelations(w http.ResponseWriter, r *http.Request) {
+
+	defer r.Body.Close()
+
+	menu := ""
+	switch len(b.storage) {
+
+	case 0:
+		menu = home
+	default:
+		menu = home + ageForm + deleteForm + list
+	}
+
+	qs := strings.Split(r.RequestURI, "/id")
+	if len(qs) < 1 {
+		return
+	}
+
+	if r.Method == "GET" {
+		response := ""
+		w.WriteHeader(http.StatusOK)
+		if q, err := strconv.Atoi(qs[1]); err != nil {
+			w.Write([]byte(useTemplate("Error", "User not found", menu)))
+			return
+		} else {
+			for ind, user := range b.storage {
+				if ind != q {
+					response += user.Checked(slices.Contains(b.storage[q].Friends, strconv.Itoa(ind)))
+				}
+			}
+			form := "<form method=POST action=" + r.RequestURI + ">" + response +
+				"<input type=submit value='Link Friends' name=ok>\n</form>"
+
+			w.Write([]byte(useTemplate("Choose users to set friendship with "+b.storage[q].Name, nl2br(form), menu)))
+		}
+		return
+	}
+
+	if r.Method == "POST" {
+
+		if q, err := strconv.Atoi(qs[1]); err != nil {
+			w.Write([]byte(useTemplate("Error", "User not found", menu)))
+			return
+		} else {
+			content, err := io.ReadAll(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+				fmt.Println(err.Error())
+				return
+			}
+
+			defer r.Body.Close()
+			if st, err := QueryParse(content); err != nil {
+				fmt.Println(err.Error())
+				w.Write([]byte(useTemplate("Error", "User not found", menu)))
+			} else {
+				menu = home + ageForm + list
+				friends := make([]string, 0)
+				for i, v := range st {
+					if v == "on" {
+						fn := strings.Split(i, "_")
+						friends = append(friends, fn[1])
+						ff, _ := strconv.Atoi(fn[1])
+						if _, err := contains(b.storage[ff].Friends, q); err != nil {
+							b.storage[ff].Friends = append(b.storage[ff].Friends, strconv.Itoa(q))
+						}
+
+					}
+				}
+				//				oldFriends := b.storage[q].Friends
+				b.storage[q].Friends = friends
+				//TODO: remove deleted friends
+				w.Write([]byte(useTemplate("Relationship set", b.storage[q].Name+" friendship updated", menu)))
+			}
+			return
+		}
+	}
+}
+
+func (b *base) RemoveFriend(uid int) {
+	for i, v := range b.storage {
+		if i != uid {
+			if ind, err := contains(v.Friends, uid); err != nil {
+				fmt.Println("Err. nothing to do:", err)
+			} else {
+				v.Friends[ind] = v.Friends[len(v.Friends)-1]
+				v.Friends[len(v.Friends)-1] = ""
+				v.Friends = v.Friends[:len(v.Friends)-1]
+			}
+		}
+	}
+}
+
+func contains(s []string, a int) (int, error) {
+	if len(s) > 0 {
+		for i, v := range s {
+			if vi, err := strconv.Atoi(v); err != nil {
+				return -1, fmt.Errorf("element not found:%s", v)
+			} else {
+				if vi == a {
+					return i, nil
+				}
+			}
+		}
+		return -1, fmt.Errorf("element not found")
+	} else {
+		return -1, fmt.Errorf("list is empty")
+	}
 }
