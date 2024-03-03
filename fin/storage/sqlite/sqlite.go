@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	_ "modernc.org/sqlite"
 )
 
 type Storage struct {

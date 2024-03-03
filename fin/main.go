@@ -1,28 +1,19 @@
 package main
 
 import (
-	"GB_STUDY_02/fin/storage/sqlite"
+	"GB_Study_02/fin/conf"
+	"GB_Study_02/fin/storage/sqlite"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 )
 
-const (
-	httpAddr    = "127.0.0.1"
-	httpPort    = "8080"
-	httpServ    = httpAddr + ":" + httpPort
-	sqliteSFile = "data/sqlite/sqlfile.db"
-)
-
-var LastId int
+// var LastId int
 
 type User struct {
 	Id      int
@@ -77,22 +68,21 @@ func (u *User) Checked(c bool) string {
 	return fmt.Sprintf(bp+"\n", u.Id, u.Id, u.Id, u.Id, u.Name, u.Age)
 }
 
-func useTemplate(title, data, menu string) string {
-	context := strings.Replace(page, "%title%", title, -1)
-	context = strings.Replace(context, "%body%", data, 1)
-	context = strings.Replace(context, "%menu%", menu, 1)
-	return context
-}
-
 type base struct {
 	storage map[int]*User
 }
 
 func main() {
 
-	LastId = 0
+	//	LastId := 0
 
-	if s, err := sqlite.New(sqliteSFile); err != nil {
+	var cf conf.Config
+
+	c := (*conf.Config).Conf(&cf)
+
+	s, err := sqlite.New(c.DBFile)
+
+	if err != nil {
 		log.Fatalf("can't connect to DB: %s", err)
 	}
 
@@ -101,17 +91,16 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	srv := base{make(map[int]*User)}
+	// srv := base{make(map[int]*User)}
 
-	mux.HandleFunc("/", srv.Start)
-	mux.HandleFunc("/create", srv.Create)
-	mux.HandleFunc("/get", srv.GetAll)
-	mux.HandleFunc("/delete", srv.DelUser)
-	mux.HandleFunc("/friendship/", srv.SetRelations)
-	mux.HandleFunc("/age", srv.ChangeAge)
+	// mux.HandleFunc("/", srv.Start)
+	// mux.HandleFunc("/create", srv.Create)
+	// mux.HandleFunc("/get", srv.GetAll)
+	// mux.HandleFunc("/delete", srv.DelUser)
+	// mux.HandleFunc("/friendship/", srv.SetRelations)
+	// mux.HandleFunc("/age", srv.ChangeAge)
 
-	err := http.ListenAndServe(httpServ, mux)
-	if errors.Is(err, http.ErrServerClosed) {
+	if err := http.ListenAndServe(c.Address+":"+c.Port, mux); errors.Is(err, http.ErrServerClosed) {
 		fmt.Println("server closed")
 	} else if err != nil {
 		fmt.Printf("error starting HTTP server: %s\n", err)
@@ -134,6 +123,7 @@ func QueryParse(query []byte) (map[string]string, error) {
 	return nil, fmt.Errorf("wrong query")
 }
 
+/*
 func (u *User) QueryParse(query []byte) ([]byte, error) {
 
 	q := strings.Split(string(query), "&")
@@ -494,3 +484,4 @@ func contains(s []string, a int) (int, error) {
 		return -1, fmt.Errorf("list is empty")
 	}
 }
+*/
