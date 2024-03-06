@@ -324,7 +324,9 @@ func (wp *WebPage) DelUser(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		return
-	} else if r.Method == "DELETE" {
+	}
+
+	if r.Method == "DELETE" {
 		content, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -338,7 +340,7 @@ func (wp *WebPage) DelUser(w http.ResponseWriter, r *http.Request) {
 		if err := json.Unmarshal(content, &u); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		//			var u User
+
 		w.WriteHeader(http.StatusOK)
 		name := wp.Storage.Stora[u.Id].Name
 		delete(wp.Storage.Stora, u.Id)
@@ -426,7 +428,32 @@ func (wp *WebPage) ChangeAge(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	w.WriteHeader(http.StatusBadRequest)
+
+	if r.Method == "PUT" {
+		content, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			fmt.Println(err.Error())
+			return
+		}
+		defer r.Body.Close()
+		var u User
+
+		if err := json.Unmarshal(content, &u); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		if wp.Storage.Stora[u.Id] != nil {
+			w.WriteHeader(http.StatusOK)
+			name := wp.Storage.Stora[u.Id].Name
+			age := wp.Storage.Stora[u.Id].Age
+			wp.Storage.Stora[u.Id].Age = u.Age
+
+			w.Write([]byte(fmt.Sprintf("%s age changed from: %d to %d", name, age, u.Age)))
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}
 
 }
 
