@@ -324,7 +324,31 @@ func (wp *WebPage) DelUser(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		return
+	} else if r.Method == "DELETE" {
+		content, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			fmt.Println(err.Error())
+			return
+		}
+		defer r.Body.Close()
+		var u User
+
+		if err := json.Unmarshal(content, &u); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		//			var u User
+		w.WriteHeader(http.StatusOK)
+		name := wp.Storage.Stora[u.Id].Name
+		delete(wp.Storage.Stora, u.Id)
+		wp.Storage.RemoveFriend(u.Id)
+
+		w.Write([]byte(fmt.Sprintf("removed: %s", name)))
+
 	}
+	defer r.Body.Close()
+
 	w.WriteHeader(http.StatusBadRequest)
 
 }
@@ -491,7 +515,7 @@ func (wp *WebPage) SetRelations(w http.ResponseWriter, r *http.Request) {
 							log.Println("Err. convert:", err)
 						} else {
 							if i, err := f.Contains(wp.Storage.Stora[v].Friends, q); err != nil {
-								log.Println("Err. nothing to do:", err)
+								//								log.Println("Err. nothing to do:", err)
 							} else if _, err := f.Contains(friends, v); err != nil {
 								wp.Storage.Stora[v].Friends[i] = wp.Storage.Stora[v].Friends[len(wp.Storage.Stora[v].Friends)-1]
 								wp.Storage.Stora[v].Friends[len(wp.Storage.Stora[v].Friends)-1] = ""

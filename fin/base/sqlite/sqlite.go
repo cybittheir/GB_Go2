@@ -68,13 +68,18 @@ func (s *Storage) AddUser(ctx context.Context, u *base.User) error {
 }
 
 func (s *Storage) FriendsList(ctx context.Context, u *base.User) (*base.Stora, error) {
-	q := `SELECT users.id, users.name, users.age FROM friends
-	LEFT JOIN users ON id1 = id OR id2 = id 
-	WHERE id1=? OR id2=?`
+	q := `SELECT id1 AS l,users.user_name,users.age FROM(
+		SELECT friends.id1 FROM friends
+		WHERE id2=?
+		UNION
+		SELECT friends.id2 FROM friends
+		WHERE id1=?
+		)s
+		LEFT JOIN users ON l=id`
 
 	var id, age int
 	var name string
-	if err := s.db.QueryRowContext(ctx, q, u.Id).Scan(&id, &name, &age); err != nil {
+	if err := s.db.QueryRowContext(ctx, q, u.Id, u.Id).Scan(&id, &name, &age); err != nil {
 		return nil, fmt.Errorf("can't read Users: %w", err)
 	}
 

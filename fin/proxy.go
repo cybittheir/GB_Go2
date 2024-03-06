@@ -21,8 +21,8 @@ type User struct {
 
 var (
 	counter            int    = 0
-	firstInstanceHost  string = "http://localhost:8081/create"
-	secondInstanceHost string = "http://localhost:8082/create"
+	firstInstanceHost  string = "http://localhost:8081"
+	secondInstanceHost string = "http://localhost:8082"
 )
 
 func main() {
@@ -49,13 +49,13 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err)
 	}
 
-	fmt.Println("2>", string(text))
+	//	fmt.Println("2>", string(text))
 
 	client := http.Client{Timeout: 2 * time.Second}
 
 	if counter == 0 {
 		//		resp, err := http.Post(firstInstanceHost, "application/json; charset=utf-8", bytes.NewBuffer(text))
-		resp, err := http.NewRequest("POST", firstInstanceHost, bytes.NewBuffer(text))
+		resp, err := http.NewRequest(r.Method, firstInstanceHost+r.RequestURI, bytes.NewBuffer(text))
 		resp.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 		if err != nil {
@@ -73,13 +73,13 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 			log.Fatalln(err)
 		}
 
-		fmt.Println(firstInstanceHost, "<<", string(textBytes), ">>", string(resBytes))
+		fmt.Println(firstInstanceHost+r.RequestURI, "<<", string(textBytes), ";", r.Method, ">>", string(resBytes))
 
 		return
 	}
 
 	//	resp, err := http.Post(secondInstanceHost, "application/json; charset=utf-8", bytes.NewBuffer(text))
-	resp, err := http.NewRequest("POST", secondInstanceHost, bytes.NewBuffer(text))
+	resp, err := http.NewRequest(r.Method, secondInstanceHost+r.RequestURI, bytes.NewBuffer(text))
 	resp.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	if err != nil {
@@ -97,6 +97,6 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(secondInstanceHost, "<<", string(textBytes), ">>", string(resBytes))
+	fmt.Println(secondInstanceHost+r.RequestURI, "<<", string(textBytes), ";", r.Method, ">>", string(resBytes))
 
 }
