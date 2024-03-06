@@ -1,4 +1,0 @@
-pachage proxy
-
-func main(){
-}

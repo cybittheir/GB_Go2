@@ -9,22 +9,6 @@ import (
 	"os"
 )
 
-const (
-	header     = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<title>%title%</title>\n<meta charset=\"utf-8\">\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</head>\n"
-	footer     = "</html>"
-	Home       = "<br>\n<a href=\\>go home / add user</a>"
-	List       = "<br>\n<a href=\\get>get users list</a>"
-	AgeForm    = "<br>\n<a href=\\age>change user's age</a>"
-	DeleteForm = "<br>\n<a href=\\delete>delete user</a>"
-	Page       = header + `
-<body id=body>
-<h4>%title%</h4>
-%body%
-%menu%
-</body>
-` + footer
-)
-
 type Config struct {
 	Address  string `json:"addr"`
 	Port     string `json:"port"`
@@ -82,4 +66,25 @@ func (d *Config) Conf() *Config {
 
 	return &c
 
+}
+
+func Template() string {
+	var ft Config
+	tf := ft.Template
+	templateFile, err := os.Open(tf)
+	if err != nil {
+		header := "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<title>%title%</title>\n<meta charset=\"utf-8\">\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</head>\n"
+		footer := "</html>"
+		page := header + `
+	<body id=body>
+	<h4>%title%</h4>
+	%body%
+	%menu%
+	</body>
+	` + footer
+		return page
+	}
+	defer templateFile.Close()
+	byteValue, _ := io.ReadAll(templateFile)
+	return string(byteValue)
 }
