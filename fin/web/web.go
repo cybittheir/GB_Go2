@@ -20,11 +20,10 @@ const (
 	AgeForm    = "<br>\n<a href=\\age>change user's age</a>"
 	DeleteForm = "<br>\n<a href=\\delete>delete user</a>"
 
-	HomeMenu    = "<br>\n<a href=\\>go home / add user</a>"
-	ListMenu    = "<br>\n<a href=\\get>get users list</a>"
-	AgeMenu     = "<br>\n<a href=\\age>change user's age</a>"
-	FriendsMenu = "<br>\n<a href=\\friendship>set relations</a>"
-	DeleteMenu  = "<br>\n<a href=\\delete>delete user</a>"
+	HomeMenu   = "<br>\n<a href=\\>go home / add user</a>"
+	ListMenu   = "<br>\n<a href=\\get>get users list</a>"
+	AgeMenu    = "<br>\n<a href=\\age>change user's age</a>"
+	DeleteMenu = "<br>\n<a href=\\delete>delete user</a>"
 )
 
 type User struct {
@@ -43,13 +42,13 @@ func (s *Stora) Count() int {
 	return len(s.Stora)
 }
 
-func (s *Stora) User() *User {
-	return s.Stora[NewUser().UserId()]
-}
+// func (s *Stora) User() *User {
+// 	return s.Stora[NewUser().UserId()]
+// }
 
-func (u *User) UserId() int {
-	return u.Id
-}
+// func (u *User) UserId() int {
+// 	return u.Id
+// }
 
 func NewUser() *User {
 	return &(User{})
@@ -71,14 +70,14 @@ func (s Stora) NextUser(content []byte) (string, error) {
 
 			s.Stora[u.Id] = &u
 
-			fmt.Println(s.Stora[u.Id])
-
 			return fmt.Sprintf("User %s (%d) was created and got ID%d", u.Name, u.Age, u.Id), nil
 		}
 	} else {
-		// wp.Storage.Stora[u.Id] = &u
-		// log.Println(&wp.Storage.Stora[u.Id])
-		return "something", nil
+		LastId++
+		u.Id = LastId
+		s.Stora[u.Id] = &u
+
+		return fmt.Sprintf("json:id_%d", u.Id), nil
 	}
 
 	return "", nil
@@ -99,7 +98,6 @@ func (wp *WebPage) Menu(r string) string {
 	hm := HomeMenu
 	am := AgeMenu
 	dm := DeleteMenu
-	fm := FriendsMenu
 	lm := ListMenu
 
 	l := 0
@@ -123,7 +121,7 @@ func (wp *WebPage) Menu(r string) string {
 		case "/get":
 			lm = ""
 		}
-		return hm + am + dm + fm + lm
+		return hm + am + dm + lm
 	}
 
 }
@@ -171,8 +169,6 @@ func (wp *WebPage) Start(w http.ResponseWriter, r *http.Request) {
 		</form>`
 		defer r.Body.Close()
 
-		//	b := base.Stora{make(map[int]*base.User)}
-
 		menu := wp.Menu(r.RequestURI)
 		form = strings.Replace(form, "%menu%", menu, 1)
 		wp.title = "Home page - add user"
@@ -202,13 +198,27 @@ func (wp *WebPage) Create(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			w.WriteHeader(http.StatusCreated)
+			if !strings.Contains(text, "json:id_") {
+				menu := wp.Menu(r.RequestURI)
 
-			menu := wp.Menu(r.RequestURI)
+				wp.title = "New user added"
+				wp.menu = menu
+				wp.data = text
+				w.Write([]byte((wp).useTemplate()))
+			} else {
+				jp := strings.Split(text, "id_")
+				if len(jp) > 1 {
+					j, _ := strconv.Atoi(jp[1])
+					if wp.Storage.Stora[j] != nil {
+						if js, err := json.Marshal(wp.Storage.Stora[j]); err != nil {
+							w.Write([]byte("Error. Unable to marshal JSON"))
+						} else {
+							w.Write(js)
+						}
+					}
 
-			wp.title = "New user added"
-			wp.menu = menu
-			wp.data = text
-			w.Write([]byte((wp).useTemplate()))
+				}
+			}
 
 		}
 
@@ -234,7 +244,6 @@ func (wp *WebPage) GetAll(w http.ResponseWriter, r *http.Request) {
 
 		response := ""
 		for _, u := range wp.Storage.Stora {
-			//response += u.ToString() + ".\n"
 			response += u.ToString() + wp.Storage.AllFriends(u) + ".\n"
 		}
 		w.WriteHeader(http.StatusOK)
