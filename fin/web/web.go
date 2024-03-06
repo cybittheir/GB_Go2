@@ -482,10 +482,17 @@ func (wp *WebPage) SetRelations(w http.ResponseWriter, r *http.Request) {
 			wp.data = f.Nl2br("Wrong ID format")
 			w.Write([]byte((wp).useTemplate()))
 			return
-		} else {
+		} else if wp.Storage.Stora[q] != nil {
+			c := wp.Storage.Stora[q].Name
+			c += " friends: "
+			cd := ""
 			for i, u := range wp.Storage.Stora {
 				if i != q {
 					response += u.Checked(slices.Contains(wp.Storage.Stora[q].Friends, fmt.Sprint(i)))
+					if slices.Contains(wp.Storage.Stora[q].Friends, fmt.Sprint(i)) {
+						cd += wp.Storage.Stora[i].Name + "; "
+					}
+
 				}
 			}
 			form := fmt.Sprintf("<form method=POST action=%s>%s<input type=submit value='Link Friends' name=ok>\n</form>", r.RequestURI, response)
@@ -494,6 +501,10 @@ func (wp *WebPage) SetRelations(w http.ResponseWriter, r *http.Request) {
 			wp.menu = menu
 			wp.data = f.Nl2br(form)
 			w.Write([]byte((wp).useTemplate()))
+			if cd == "" {
+				cd = "no one"
+			}
+			fmt.Println(c, cd)
 		}
 		return
 	}
