@@ -19,6 +19,20 @@ type User struct {
 	Friends []string `json:"friends"`
 }
 
+type All struct {
+	Id      int      `json:"id"`
+	Name    string   `json:"name"`
+	Age     int      `json:"age"`
+	Friends []string `json:"friends"`
+	Src     int      `json:"source_id"`
+	Tgt     int      `json:"target_id"`
+}
+
+type Rels struct {
+	Src int `json:"source_id"`
+	Tgt int `json:"target_id"`
+}
+
 var (
 	counter            int    = 0
 	firstInstanceHost  string = "http://localhost:8081"
@@ -36,20 +50,35 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	var u User
 
-	if err := json.Unmarshal(textBytes, &u); err != nil {
-		fmt.Println("0>", u)
+	var a All
+	var u User
+	var f Rels
+	var text []byte
+
+	if err := json.Unmarshal(textBytes, &a); err != nil {
+		fmt.Println("0->", u)
 	} else {
-		fmt.Println("1>", string(textBytes))
+		if a.Src != a.Tgt {
+			if err := json.Unmarshal(textBytes, &f); err != nil {
+			} else {
+				text, err = json.Marshal(&f)
+				fmt.Println("1->", string(textBytes))
+			}
+		} else {
+			if err := json.Unmarshal(textBytes, &u); err != nil {
+			} else {
+				text, err = json.Marshal(&u)
+				fmt.Println("1->", string(textBytes))
+			}
+		}
 	}
-	text, err := json.Marshal(&u)
 
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	//	fmt.Println("2>", string(text))
+	fmt.Println("2>", string(text))
 
 	client := http.Client{Timeout: 2 * time.Second}
 

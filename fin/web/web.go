@@ -33,6 +33,11 @@ type User struct {
 	Friends []string `json:"friends"`
 }
 
+type Rels struct {
+	Src int `json:"source_id"`
+	Tgt int `json:"target_id"`
+}
+
 type Stora struct {
 	Stora map[int]*User
 }
@@ -465,12 +470,45 @@ func (wp *WebPage) SetRelations(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	defer r.Body.Close()
 
-	if len(qs) < 2 {
-		wp.title = "Error"
-		wp.menu = menu
-		wp.data = f.Nl2br("First choose user in the list for set relations")
-		w.Write([]byte((wp).useTemplate()))
+	if len(qs) < 2 && r.Method == "POST" {
+
+		content, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			fmt.Println(err.Error())
+			return
+		}
+		defer r.Body.Close()
+
+		var frn Rels
+		if err := json.Unmarshal(content, &frn); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+
+			wp.title = "Error"
+			wp.menu = menu
+			wp.data = f.Nl2br("First choose user in the list for set relations")
+			w.Write([]byte((wp).useTemplate()))
+			return
+		} else {
+			sid := frn.Src
+			tid := frn.Tgt
+
+			if wp.Storage.Stora[sid] != nil && wp.Storage.Stora[tid] != nil {
+				if !slices.Contains(wp.Storage.Stora[sid].Friends, fmt.Sprint(tid)) &&
+					!slices.Contains(wp.Storage.Stora[tid].Friends, fmt.Sprint(sid)) {
+					wp.Storage.Stora[sid].Friends = append(wp.Storage.Stora[sid].Friends, fmt.Sprint(tid))
+					wp.Storage.Stora[tid].Friends = append(wp.Storage.Stora[tid].Friends, fmt.Sprint(sid))
+
+					w.Write([]byte(fmt.Sprintln(wp.Storage.Stora[sid].Name + " and " + wp.Storage.Stora[tid].Name + " stored as friends")))
+
+				}
+			} else {
+				w.Write([]byte(fmt.Sprintln("Not available to store users as friends")))
+			}
+		}
 		return
+
 	}
 
 	if r.Method == "GET" {
