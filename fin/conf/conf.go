@@ -13,23 +13,27 @@ type Config struct {
 	Address  string `json:"addr"`
 	Port     string `json:"port"`
 	DBFile   string `json:"dbfile"`
+	JSFile   string `json:"jsfile"`
 	Template string `json:"tplfile"`
 }
 
-func (d *Config) Conf() *Config {
+var Cfg Config
+
+func (c *Config) Conf() *Config {
 
 	fn := "conf.json"
 	_, err := os.Stat(fn)
 	if errors.Is(err, os.ErrNotExist) {
 		log.Println(err)
-		d.Address = "127.0.0.1"
-		d.Port = "8080"
-		d.DBFile = "sqlite.db"
-		d.Template = "index.tpl"
+		c.Address = "127.0.0.1"
+		c.Port = "8080"
+		c.DBFile = "sqlite.db"
+		c.JSFile = "storage.json"
+		c.Template = "index.tpl"
 
 		var b []byte
 
-		b, _ = json.Marshal(d)
+		b, _ = json.Marshal(c)
 
 		if err := os.WriteFile(fn, b, 0644); err != nil {
 			fmt.Println("Unable to save", err)
@@ -43,11 +47,12 @@ func (d *Config) Conf() *Config {
 	if err != nil {
 		fmt.Println("Can not open conf.json:", err)
 		fmt.Println("Using default: 127.0.0.1:8080; sqlite.db; index.tpl")
-		d.Address = "127.0.0.1"
-		d.Port = "8080"
-		d.DBFile = "sqlite.db"
-		d.Template = "index.tpl"
-		return d
+		c.Address = "127.0.0.1"
+		c.Port = "8080"
+		c.DBFile = "sqlite.db"
+		c.JSFile = "storage.json"
+		c.Template = "index.tpl"
+		return c
 	}
 	fmt.Println("Successfully opened: conf.json")
 
@@ -55,22 +60,24 @@ func (d *Config) Conf() *Config {
 
 	byteValue, _ := io.ReadAll(configFile)
 
-	var c Config
+	var cf Config
 
-	json.Unmarshal([]byte(byteValue), &c)
+	json.Unmarshal([]byte(byteValue), &cf)
 	fmt.Println("Using config:")
-	fmt.Println("http://", c.Address, ":", c.Port)
-	fmt.Println("SQLite: ", c.DBFile)
-	fmt.Println("template: ", c.Template)
+	fmt.Println("http://", cf.Address, ":", cf.Port)
+	fmt.Println("SQLite: ", cf.DBFile)
+	fmt.Println("Storage: ", cf.JSFile)
+	fmt.Println("template: ", cf.Template)
 	fmt.Println("==================")
-
-	return &c
+	Cfg.Template = cf.Template
+	Cfg.JSFile = cf.JSFile
+	return &cf
 
 }
 
 func Template() string {
-	var ft Config
-	tf := ft.Template
+
+	tf := Cfg.Template
 	templateFile, err := os.Open(tf)
 	if err != nil {
 		header := "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<title>%title%</title>\n<meta charset=\"utf-8\">\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</head>\n"
@@ -87,4 +94,9 @@ func Template() string {
 	defer templateFile.Close()
 	byteValue, _ := io.ReadAll(templateFile)
 	return string(byteValue)
+}
+
+func JSStor() string {
+
+	return Cfg.JSFile
 }

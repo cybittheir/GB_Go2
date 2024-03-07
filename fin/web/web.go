@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -42,18 +43,15 @@ type Stora struct {
 	Stora map[int]*User
 }
 
+type Cfg struct {
+	JSFile string
+	Templt string
+}
+
 func (s *Stora) Count() int {
 
 	return len(s.Stora)
 }
-
-// func (s *Stora) User() *User {
-// 	return s.Stora[NewUser().UserId()]
-// }
-
-// func (u *User) UserId() int {
-// 	return u.Id
-// }
 
 func NewUser() *User {
 	return &(User{})
@@ -166,6 +164,8 @@ func NewHttp(a, p string) (string, error) {
 
 func (wp *WebPage) Start(w http.ResponseWriter, r *http.Request) {
 
+	wp.Storage.ReadStorage()
+
 	if r.Method == "GET" {
 		form := `<form method=POST action=/create>
 		Username <input type=text id=name name=name size=20><br>
@@ -187,6 +187,9 @@ func (wp *WebPage) Start(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wp *WebPage) Create(w http.ResponseWriter, r *http.Request) {
+
+	wp.Storage.ReadStorage()
+
 	if r.Method == "POST" {
 
 		content, err := io.ReadAll(r.Body)
@@ -210,6 +213,7 @@ func (wp *WebPage) Create(w http.ResponseWriter, r *http.Request) {
 				wp.menu = menu
 				wp.data = text
 				w.Write([]byte((wp).useTemplate()))
+				wp.Storage.SaveStorage()
 			} else {
 				jp := strings.Split(text, "id_")
 				if len(jp) > 1 {
@@ -218,6 +222,7 @@ func (wp *WebPage) Create(w http.ResponseWriter, r *http.Request) {
 						if js, err := json.Marshal(wp.Storage.Stora[j]); err != nil {
 							w.Write([]byte("Error. Unable to marshal JSON"))
 						} else {
+							wp.Storage.SaveStorage()
 							w.Write(js)
 						}
 					}
@@ -232,20 +237,11 @@ func (wp *WebPage) Create(w http.ResponseWriter, r *http.Request) {
 
 func (wp *WebPage) GetAll(w http.ResponseWriter, r *http.Request) {
 
+	wp.Storage.ReadStorage()
+
 	defer r.Body.Close()
 
 	if r.Method == "GET" {
-
-		//		q := "SELECT * FROM users"
-
-		// q:="select id1 as l,users.user_name,users.age from(
-		// select friends.id1 from friends
-		// where id2=%i
-		// union
-		// select friends.id2 from friends
-		// where id1=%i
-		// )s
-		// left join users on l=id"
 
 		response := ""
 		for _, u := range wp.Storage.Stora {
@@ -324,6 +320,7 @@ func (wp *WebPage) DelUser(w http.ResponseWriter, r *http.Request) {
 				wp.title = "User was deleted"
 				wp.menu = menu
 				wp.data = f.Nl2br(fmt.Sprintf("User with ID%d was deleted", u.Id))
+				wp.Storage.SaveStorage()
 				w.Write([]byte((wp).useTemplate()))
 
 			}
@@ -350,6 +347,7 @@ func (wp *WebPage) DelUser(w http.ResponseWriter, r *http.Request) {
 		name := wp.Storage.Stora[u.Id].Name
 		delete(wp.Storage.Stora, u.Id)
 		wp.Storage.RemoveFriend(u.Id)
+		wp.Storage.SaveStorage()
 
 		w.Write([]byte(fmt.Sprintf("removed: %s", name)))
 
@@ -427,6 +425,7 @@ func (wp *WebPage) ChangeAge(w http.ResponseWriter, r *http.Request) {
 				wp.title = "User's Age was changed"
 				wp.menu = menu
 				wp.data = f.Nl2br(fmt.Sprintf("New User's Age (ID%d) is %d now", u.Id, u.Age))
+				wp.Storage.SaveStorage()
 				w.Write([]byte((wp).useTemplate()))
 
 			}
@@ -453,6 +452,7 @@ func (wp *WebPage) ChangeAge(w http.ResponseWriter, r *http.Request) {
 			name := wp.Storage.Stora[u.Id].Name
 			age := wp.Storage.Stora[u.Id].Age
 			wp.Storage.Stora[u.Id].Age = u.Age
+			wp.Storage.SaveStorage()
 
 			w.Write([]byte(fmt.Sprintf("%s age changed from: %d to %d", name, age, u.Age)))
 		} else {
@@ -500,6 +500,7 @@ func (wp *WebPage) SetRelations(w http.ResponseWriter, r *http.Request) {
 					wp.Storage.Stora[sid].Friends = append(wp.Storage.Stora[sid].Friends, fmt.Sprint(tid))
 					wp.Storage.Stora[tid].Friends = append(wp.Storage.Stora[tid].Friends, fmt.Sprint(sid))
 
+					wp.Storage.SaveStorage()
 					w.Write([]byte(fmt.Sprintln(wp.Storage.Stora[sid].Name + " and " + wp.Storage.Stora[tid].Name + " stored as friends")))
 
 				}
@@ -605,6 +606,7 @@ func (wp *WebPage) SetRelations(w http.ResponseWriter, r *http.Request) {
 				wp.title = "Relationship set"
 				wp.menu = menu
 				wp.data = f.Nl2br(wp.Storage.Stora[q].Name + " friendship updated")
+				wp.Storage.SaveStorage()
 				w.Write([]byte((wp).useTemplate()))
 
 			}
@@ -697,4 +699,40 @@ func (s *Stora) RemoveFriend(uid int) {
 			}
 		}
 	}
+}
+
+func (s *Stora) SaveStorage() {
+
+	sf := conf.JSStor()
+	if ct, err := json.Marshal(s.Stora); err != nil {
+		log.Println("Storage mem: Cannot to read data")
+	} else {
+		if err := os.WriteFile(sf, ct, 0644); err != nil {
+			fmt.Println("Unable to save", sf, err)
+			return
+		} else {
+			log.Println("Saved data")
+		}
+	}
+
+}
+
+func (s *Stora) ReadStorage() {
+
+	storageFile, err := os.Open(conf.JSStor())
+
+	if err != nil {
+		return
+	}
+
+	defer storageFile.Close()
+	byteValue, _ := io.ReadAll(storageFile)
+	clear(s.Stora)
+	json.Unmarshal([]byte(byteValue), &s.Stora)
+	for i := range s.Stora {
+		if LastId < i {
+			LastId = i
+		}
+	}
+
 }

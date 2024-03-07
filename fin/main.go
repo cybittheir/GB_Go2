@@ -10,13 +10,23 @@ import (
 
 var LastId int
 
+type Cfg struct {
+	Address  string
+	Port     string
+	DBFile   string
+	JSFile   string
+	Template string
+}
+
 func main() {
 
 	var cf conf.Config
 
-	c := (*conf.Config).Conf(&cf)
+	Cfg := (*conf.Config).Conf(&cf)
 
-	s, err := sqlite.New(c.DBFile)
+	//	Cfg := *c
+
+	s, err := sqlite.New(Cfg.DBFile)
 
 	if err != nil {
 		log.Fatalf("can't connect to DB: %s", err)
@@ -26,7 +36,7 @@ func main() {
 		log.Fatalf("can't init DB: %s", err)
 	}
 
-	if h, err := web.NewHttp(c.Address, c.Port); err != nil {
+	if h, err := web.NewHttp(Cfg.Address, Cfg.Port); err != nil {
 		panic(err)
 	} else {
 		log.Println(h)
